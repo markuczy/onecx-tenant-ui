@@ -93,7 +93,6 @@ class MockRouter implements Partial<Router> {
     commands: any[],
     extras?: NavigationExtras | undefined
   ): Promise<boolean> {
-    console.log("aaaa");
     const routerNavigatedAction = {
       type: ROUTER_NAVIGATED,
     } as RouterNavigatedAction;
