@@ -34,7 +34,8 @@
     },
     {
       "path": "./tsconfig.editor.json"
-    }
+    },
+    { "path": "./tsconfig.cy.json" }
   ],
   "compileOnSave": false,
   "exclude": ["node_modules", "tmp"],

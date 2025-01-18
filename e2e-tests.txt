@@ -1,0 +1,6 @@
+
+> onecx-tenant-ui@0.0.0 e2e-tests
+> tsx src/e2e-tests.ts
+
+Running e2e-tests
+Finished e2e-tests
