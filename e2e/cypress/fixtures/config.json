@@ -1,0 +1,290 @@
+{
+  "database": {
+    "image": "docker.io/library/postgres:13.4",
+    "name": "e2e-postgresDb",
+    "alias": "e2e-postgresDb",
+    "databaseName": "postgres",
+    "username": "postgres",
+    "password": "admin",
+    "port": 5432,
+    "env": {
+      "POSTGRES_DB": "postgres",
+      "POSTGRES_USER": "postgres",
+      "POSTGRES_PASSWORD": "admin"
+    },
+    "healthCheck": {
+      "command": "pg_isready -U postgres",
+      "interval": 10000,
+      "timeout": 5000,
+      "retries": 3
+    },
+    "users": [
+      {
+        "name": "keycloak",
+        "password": "keycloak"
+      },
+      {
+        "name": "keycloak_public",
+        "password": "keycloak_public"
+      }
+    ],
+    "databases": [
+      {
+        "name": "keycloak",
+        "user": "keycloak"
+      },
+      {
+        "name": "keycloak_public",
+        "user": "keycloak_public"
+      }
+    ]
+  },
+  "keycloak": {
+    "image": "quay.io/keycloak/keycloak:23.0.4",
+    "name": "e2e-keycloak-app",
+    "alias": "e2e-keycloak-app",
+    "adminRealm": "master",
+    "adminUsername": "admin",
+    "adminPassword": "admin",
+    "port": 8080,
+    "command": ["start-dev", "--import-realm"],
+    "startupTimeout": 100000,
+    "env": {
+      "KEYCLOAK_ADMIN": "admin",
+      "KEYCLOAK_ADMIN_PASSWORD": "admin",
+      "KC_DB": "postgres",
+      "KC_DB_POOL_INITIAL_SIZE": 1,
+      "KC_DB_POOL_MAX_SIZE": 5,
+      "KC_DB_POOL_MIN_SIZE": 2,
+      "KC_DB_URL_DATABASE": "keycloak",
+      "KC_DB_URL_HOST": "e2e-postgresDb",
+      "KC_DB_USERNAME": "keycloak",
+      "KC_DB_PASSWORD": "keycloak",
+      "KC_HOSTNAME": "e2e-keycloak-app",
+      "KC_HOSTNAME_STRICT": false,
+      "KC_HTTP_ENABLED": true,
+      "KC_HTTP_PORT": 8080,
+      "KC_HEALTH_ENABLED": true
+    },
+    "healthCheck": {
+      "interval": 10000,
+      "timeout": 5000,
+      "retries": 10
+    },
+    "realms": [
+      {
+        "name": "onecx",
+        "path": "e2e/test-realm.json"
+      }
+    ]
+  },
+  "shell": {
+    "image": "ghcr.io/onecx/onecx-shell-ui:main",
+    "name": "e2e-shell-ui",
+    "alias": "e2e-shell-ui",
+    "port": 8080,
+    "env": {
+      "ONECX_PERMISSIONS_ENABLED": false,
+      "ONECX_PERMISSIONS_CACHE_ENABLED": false,
+      "ONECX_PERMISSIONS_PRODUCT_NAME": "onecx-shell",
+      "APP_BASE_HREF": "/onecx-shell/",
+      "KEYCLOAK_URL": "http://e2e-keycloak-app:8080",
+      "ONECX_VAR_REMAP": "KEYCLOAK_REALM=KC_REALM;KEYCLOAK_CLIENT_ID=CLIENT_USER_ID",
+      "KC_REALM": "onecx",
+      "CLIENT_USER_ID": "onecx-shell-ui-client",
+      "QUARKUS_OIDC_AUTH_SERVER_URL": "http://e2e-keycloak-app:8080/realms/onecx",
+      "QUARKUS_OIDC_TOKEN_ISSUER": "http://e2e-keycloak-app/realms/onecx",
+      "TKIT_SECURITY_AUTH_ENABLED": false,
+      "TKIT_RS_CONTEXT_TENANT_ID_MOCK_ENABLED": false,
+      "TKIT_LOG_JSON_ENABLED": false,
+      "BFF_URL": "http://onecx-shell-bff:8080"
+    }
+  },
+  "containers": [
+    {
+      "image": "ghcr.io/onecx/onecx-tenant-ui:main",
+      "name": "e2e-tenant-ui",
+      "alias": "e2e-tenant-ui",
+      "port": 8080,
+      "env": {
+        "APP_BASE_HREF": "/mfe/tenant/",
+        "APP_ID": "onecx-tenant-ui",
+        "PRODUCT_NAME": "onecx-tenant",
+        "KC_REALM": "onecx",
+        "QUARKUS_OIDC_AUTH_SERVER_URL": "http://e2e-keycloak-app:8080/realms/onecx",
+        "QUARKUS_OIDC_TOKEN_ISSUER": "http://e2e-keycloak-app/realms/onecx",
+        "TKIT_SECURITY_AUTH_ENABLED": false,
+        "TKIT_RS_CONTEXT_TENANT-ID_MOCK_ENABLED": false,
+        "TKIT_LOG_JSON_ENABLED": false,
+        "BFF_URL": "http://onecx-tenant-bff:8080"
+      }
+    }
+  ],
+  "mocks": [
+    {
+      "id": "workspace",
+      "method": "POST",
+      "url": "http://e2e-shell-ui:8080/onecx-shell/shell-bff/workspaceConfig",
+      "response": {
+        "statusCode": 200,
+        "body": {
+          "routes": [
+            {
+              "url": "http://e2e-tenant-ui:8080/mfe/tenant/",
+              "baseUrl": "/admin/tenant/",
+              "remoteEntryUrl": "http://e2e-tenant-ui:8080/mfe/tenant/remoteEntry.js",
+              "appId": "onecx-tenant-ui",
+              "productName": "onecx-tenant",
+              "technology": "WebComponentModule",
+              "exposedModule": "./OneCXTenantModule",
+              "pathMatch": "prefix",
+              "remoteName": "onecx-tenant",
+              "elementName": "ocx-tenant-component",
+              "displayName": "OneCX Tenant",
+              "endpoints": []
+            }
+          ],
+          "theme": {
+            "displayName": "OneCX",
+            "name": "OneCX",
+            "cssFile": null,
+            "description": "OneCX Theme",
+            "assetsUrl": null,
+            "logoUrl": "",
+            "faviconUrl": "/mfe/theme/bff/images/OneCX/favicon",
+            "previewImageUrl": null,
+            "assetsUpdateDate": null,
+            "properties": "{\"font\":{\"font-family\":null,\"font-size\":null},\"topbar\":{\"topbar-bg-color\":\"#0D3650\",\"topbar-item-text-color\":\" #ffffff\",\"topbar-text-color\":\"#ffffff\",\"topbar-left-bg-color\":\"#0D3650\",\"topbar-item-text-hover-bg-color\":\"#262626\",\"topbar-menu-button-bg-color\":\" rgb(255 0 68)\",\"logo-color\":\" #ffffff\"},\"general\":{\"primary-color\":\"#274B5F\",\"secondary-color\":\"#1C4257\",\"text-color\":\" rgba(0, 0, 0, 0.87)\",\"text-secondary-color\":\"#262626\",\"body-bg-color\":\" #f7f7f7\",\"content-bg-color\":\" #ffffff\",\"content-alt-bg-color\":null,\"overlay-content-bg-color\":\" #ffffff\",\"hover-bg-color\":\"#ad1457\",\"solid-surface-text-color\":\" #ffffff\",\"divider-color\":\" #e4e4e4\",\"button-hover-bg\":\"#ad1457\",\"button-active-bg\":null,\"danger-button-bg\":\"#D32F2F\",\"info-message-bg\":\"#b3e5fc\",\"success-message-bg\":\"#c8e6c9\",\"warning-message-bg\":\"#ffecb3\",\"error-message-bg\":\"#ffcdd2\"},\"sidebar\":{\"menu-text-color\":\"#274B5F\",\"menu-bg-color\":\" #fdfeff\",\"menu-item-text-color\":\" #515c66\",\"menu-item-bg-color\":null,\"menu-item-hover-bg-color\":\" #e4e4e4\",\"menu-active-item-text-color\":\" #515c66\",\"menu-active-item-bg-color\":\" rgba(0, 0, 0, 0.04)\",\"menu-inline-border-color\":null}}"
+          },
+          "workspace": {
+            "displayName": "OneCX Admin",
+            "name": "ADMIN",
+            "baseUrl": "/admin",
+            "homePage": "/welcome"
+          },
+          "components": [],
+          "slots": []
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "userProfile",
+      "method": "GET",
+      "url": "http://e2e-shell-ui:8080/onecx-shell/shell-bff/userProfile",
+      "response": {
+        "body": {
+          "userProfile": {
+            "userId": "81aa2fd8-ad17-47f4-a78d-8eaca79cbf1b",
+            "organization": null,
+            "person": {
+              "firstName": "Admin",
+              "lastName": "OneCX",
+              "displayName": "OneCX Admin",
+              "email": "onecx@gm.com",
+              "address": {
+                "street": "Olof Palme Str",
+                "streetNo": "14",
+                "city": "München",
+                "postalCode": "81829",
+                "country": "DE"
+              },
+              "phone": {
+                "type": "MOBILE",
+                "number": "016096993451"
+              }
+            },
+            "accountSettings": {
+              "layoutAndThemeSettings": {
+                "colorScheme": "AUTO",
+                "menuMode": "STATIC"
+              },
+              "localeAndTimeSettings": {
+                "locale": "en",
+                "timezone": "Europe/Berlin"
+              }
+            }
+          }
+        },
+        "statusCode": 200
+      }
+    },
+    {
+      "id": "permissions",
+      "method": "POST",
+      "url": "http://e2e-shell-ui:8080/onecx-shell/shell-bff/permissions",
+      "body": {
+        "type": "STRING",
+        "values": "{appId: \"onecx-tenant-ui\", productName: \"onecx-tenant\"}"
+      },
+      "response": {
+        "body": {
+          "permissions": [
+            "SEARCHCONFIG#USE",
+            "TENANT#USE_SEARCHCONFIGS",
+            "TENANT#IMPORT",
+            "TENANT#DELETE",
+            "TENANT#CREATE",
+            "TENANT#SEARCH",
+            "TENANT#EXPORT",
+            "TENANT#EDIT",
+            "TENANT#SAVE",
+            "TENANT#VIEW"
+          ]
+        },
+        "statusCode": 200
+      }
+    },
+    {
+      "id": "tenants",
+      "method": "POST",
+      "url": "http://e2e-tenant-ui:8080/mfe/tenant/bff/tenants/search",
+      "response": {
+        "body": {
+          "totalElements": 3,
+          "number": 0,
+          "size": 100,
+          "totalPages": 1,
+          "stream": [
+            {
+              "modificationCount": 0,
+              "creationDate": null,
+              "creationUser": null,
+              "modificationDate": null,
+              "modificationUser": null,
+              "id": "vw",
+              "orgId": "vw",
+              "tenantId": "40.0001",
+              "description": "VW"
+            },
+            {
+              "modificationCount": 0,
+              "creationDate": null,
+              "creationUser": null,
+              "modificationDate": null,
+              "modificationUser": null,
+              "id": "skoda",
+              "orgId": "skoda",
+              "tenantId": "42.0001",
+              "description": "Skoda"
+            },
+            {
+              "modificationCount": 0,
+              "creationDate": null,
+              "creationUser": null,
+              "modificationDate": null,
+              "modificationUser": null,
+              "id": "porsche",
+              "orgId": "porsche",
+              "tenantId": "49.0001",
+              "description": "Porsche"
+            }
+          ]
+        },
+        "statusCode": 200
+      }
+    }
+  ]
+}
