@@ -1,5 +1,6 @@
 const { ModifyEntryPlugin } = require('@angular-architects/module-federation/src/utils/modify-entry-plugin')
 const { share, withModuleFederationPlugin } = require('@angular-architects/module-federation/webpack')
+const webpack = require('webpack')
 const config = withModuleFederationPlugin({
   name: 'onecx-tenant-ui',
   filename: 'remoteEntry.js',
@@ -35,7 +36,12 @@ const config = withModuleFederationPlugin({
 
 module.exports = config
 
-const plugins = config.plugins.filter((plugin) => !(plugin instanceof ModifyEntryPlugin))
+const plugins = [
+  ...config.plugins.filter((plugin) => !(plugin instanceof ModifyEntryPlugin)),
+  new webpack.DefinePlugin({
+    ngDevMode: true
+  })
+]
 
 module.exports = {
   ...config,
